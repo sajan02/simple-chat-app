@@ -1,0 +1,136 @@
+<html>
+
+<head>
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font: 13px Helvetica, Arial;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        #messages li {
+            padding: 5px 10px;
+        }
+
+        #messages li:nth-child(odd) {
+            background: #eee;
+        }
+
+        #user-chats {
+            display: none;
+        }
+
+        #loginContainer {
+            margin: auto;
+        }
+
+        #m {
+            width: 90%;
+        }
+
+        #msgButton {
+            background-color: #007bff;
+            width: 10%;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="loginContainer">
+            <form id='loginForm' action="">
+                <div class="form-group">
+                    <label for="exampleInputEmail1">Name</label>
+                    <input type="text" class="form-control" id="userName" aria-describedby="userHelp"
+                        placeholder="Enter email">
+                    <small id="userHelp" class="form-text text-muted">We'll never share your chats with anyone
+                        else.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+        <div id="user-chats">
+            <div class="row">
+                <div class="col-md-4">
+                    <h1>Active users</h1>
+                    <ul class="list-group" id="activeUsers"></ul>
+                </div>
+                <div class="col-md-8">
+                    <ul id="messages"></ul>
+                    <div style="position: absolute; width: 96%">
+                        <form id='postMsg' action="">
+                            <input id="m" autocomplete="off" /><button id="msgButton">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        $(function () {
+            var socket = io();
+            socket.on('initialize chat', function (data) {
+                for (i = 0; i < data.messages.length; i++) {
+                    $('#messages').append(data.messages[i]);
+                }
+                for (j = 0; j < data.users.length; j++) {
+                    let userDetail = '<li class="list-group-item d-flex justify-content-between align-items-center">\
+                      ' + data.users[j].name + '<span class="badge badge-primary badge-pill">' + data.users[j]
+                        .messageCount + '</span></li>'
+                    $('#activeUsers').append(userDetail)
+                }
+            })
+            $('#loginForm').submit(function (e) {
+                e.preventDefault(); // prevents page reloading
+                socket.emit('start chat', $('#userName').val());
+                $('#loginContainer').hide();
+                $('#user-chats').show();
+            })
+            $('#postMsg').submit(function (e) {
+                e.preventDefault(); // prevents page reloading
+                socket.emit('post message', $('#m').val());
+                $('#m').val('');
+                return false;
+            });
+            socket.on('Highlight Me',function(index){
+                $('#activeUsers>li:nth-child(' + index + ')').css({"background-color": "yellow", "font-size": "200%"})
+            })
+            socket.on('new message', function (data) {
+                $('#messages').append('<li><strong>' + data.user + ':</strong>' + data.message +
+                    '</li>');
+                let lisText = $('#activeUsers>li:nth-child(' + data.userIndex + ')>span').text();
+                $('#activeUsers>li:nth-child(' + data.userIndex + ')>span').text(Number(lisText)+1);
+            });
+            socket.on('update active users', function (data) {
+                if(data.append){
+                    let userDetail = '<li class="list-group-item d-flex justify-content-between align-items-center">\
+                      ' + data.name + '<span class="badge badge-primary badge-pill">' + data.messageCount +
+                    '</span></li>'
+                    $('#activeUsers').append(userDetail)
+                    return true
+                }
+                $('#activeUsers>li:nth-child(' + data.index + ')').remove()
+                return true
+            })
+        });
+    </script>
+</body>
+
+</html>
